@@ -1,2 +1,2 @@
 # signal_process
-process voice signal
+this version work for Linux OS, use VS to develop.
