@@ -8,7 +8,7 @@ void Reader_Sort(complex *x, int len)
 	complex temp;
 	int cur_rev = 0; //从0开始，递推出所有原自然排序数对应的倒序数
 	int k = len / 2; //初始化权值系数
-	int i, j;
+	int j;
 	for (j = 1; j <= len - 1; j++) {
 		//当前倒序数的最高位为0，
 		if (cur_rev < k) {
@@ -48,7 +48,8 @@ void FFTR(double *dat_seq, int SEQ_N, int SEQ_M, complex res_seq[])
 	int i, j, k, r;
 	int B, P;
 	complex Wn, Res;
-	complex yn[SEQ_N/2], X1[SEQ_N/2], X2[SEQ_N/2], X[SEQ_N];
+	//complex yn[SEQ_N/2], X1[SEQ_N/2], X2[SEQ_N/2], X[SEQ_N];
+	complex yn[N/2], X1[N/2], X2[N/2], X[N];
 
 	//构造y(n)
 //	yn[0].real=0.0; yn[0].img=1.0;
@@ -112,7 +113,8 @@ void iFFTR(double *dat_seq, int SEQ_N, int SEQ_M, complex res_seq[])
 	int i, j, k, r;
 	int B, P;
 	complex Wn, Res;
-	complex yn[SEQ_N/2], X1[SEQ_N/2], X2[SEQ_N/2], X[SEQ_N];
+	//complex yn[SEQ_N/2], X1[SEQ_N/2], X2[SEQ_N/2], X[SEQ_N];
+	complex yn[N/2], X1[N/2], X2[N/2], X[N];
 
 	//构造y(n)
 //	yn[0].real=0.0; yn[0].img=1.0;

@@ -19,6 +19,8 @@ typedef struct {
 //int L, B, P, K;
 //complex A[N], Wn, Temp, Res;
 
+#define N 8
+
 void complex_add(complex a, complex b, complex *c);
 void complex_sub(complex a, complex b, complex *c);
 void complex_mul(complex a, complex b, complex *c);
