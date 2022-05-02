@@ -68,8 +68,6 @@ void overlap_save(double xn[], int len_xn, double wn[], int len_wn, double yn[])
 	//memcpy(yn, Res, len_xn);
 	for (i=len_wn; i<len_xn; i++) {
 		yn[i]=Res[i].real;
-
-		//printf("res[%d].img=%f\n", i, Res[i].real);
 	}
 
 	free(wn_double);
@@ -78,3 +76,12 @@ void overlap_save(double xn[], int len_xn, double wn[], int len_wn, double yn[])
 	free(Y);
 	free(Res);
 }
+
+void conv(double *inputdata, long input_len, double *rir_dat, long rir_length, double *outputdata)
+{
+
+	printf("input_len:%ld\n", input_len);
+	printf("rir_length=%d\n", rir_length);
+	memcpy(outputdata, inputdata, input_len);
+}
+
