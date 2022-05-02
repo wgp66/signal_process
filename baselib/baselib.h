@@ -30,6 +30,6 @@ void Reader_Sort(complex *x, int len);
 void FFT(complex *input_seq, int SEQ_N, int SEQ_M, complex res_seq[]);
 void iFFT(complex *input_seq, int SEQ_N, int SEQ_M, complex res_seq[]);
 void FFTR(double *dat_seq, int SEQ_N, int SEQ_M, complex res_seq[]);
-void iFFTR(double *dat_seq, int SEQ_N, int SEQ_M, complex res_seq[]);
+void iFFTR(double *dat_seq, int SEQ_N, int SEQ_M, complex *res_seq);
 
 #endif

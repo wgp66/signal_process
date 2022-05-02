@@ -1,5 +1,7 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
+#include <string.h>
 #include "baselib.h"
 
 //输入序列的长度必须是2的整数次幂
@@ -43,13 +45,21 @@ void Reader_Sort(complex *x, int len)
 	}
 }
 
-void FFTR(double *dat_seq, int SEQ_N, int SEQ_M, complex res_seq[])
+void FFTR(double *dat_seq, int SEQ_N, int SEQ_M, complex *res_seq)
 {
 	int i, j, k, r;
 	int B, P;
 	complex Wn, Res;
 	//complex yn[SEQ_N/2], X1[SEQ_N/2], X2[SEQ_N/2], X[SEQ_N];
-	complex yn[N/2], X1[N/2], X2[N/2], X[N];
+	//complex yn[N/2], X1[N/2], X2[N/2], X[N];
+	complex *yn=NULL;
+	complex *X1=NULL;
+	complex *X2=NULL;
+	complex *X=NULL;
+	yn = (complex *)malloc(SEQ_N/2 * sizeof(complex));
+	X1 = (complex *)malloc(SEQ_N/2 * sizeof(complex));
+	X2 = (complex *)malloc(SEQ_N/2 * sizeof(complex));
+	X = (complex *)malloc(SEQ_N * sizeof(complex));
 
 	//构造y(n)
 //	yn[0].real=0.0; yn[0].img=1.0;
@@ -102,10 +112,11 @@ void FFTR(double *dat_seq, int SEQ_N, int SEQ_M, complex res_seq[])
 		}
 	}
 
-	for (i=0; i < SEQ_N; i++) {
-		res_seq[i].real=X[i].real;
-		res_seq[i].img=X[i].img;
-	}
+	memcpy(res_seq, X, SEQ_N*sizeof(complex));
+	free(yn);
+	free(X1);
+	free(X2);
+	free(X);
 }
 
 void iFFTR(double *dat_seq, int SEQ_N, int SEQ_M, complex res_seq[])
@@ -114,7 +125,15 @@ void iFFTR(double *dat_seq, int SEQ_N, int SEQ_M, complex res_seq[])
 	int B, P;
 	complex Wn, Res;
 	//complex yn[SEQ_N/2], X1[SEQ_N/2], X2[SEQ_N/2], X[SEQ_N];
-	complex yn[N/2], X1[N/2], X2[N/2], X[N];
+	//complex yn[N/2], X1[N/2], X2[N/2], X[N];
+	complex *yn=NULL;
+	complex *X1=NULL;
+	complex *X2=NULL;
+	complex *X=NULL;
+	yn = (complex *)malloc(SEQ_N/2 * sizeof(complex));
+	X1 = (complex *)malloc(SEQ_N/2 * sizeof(complex));
+	X2 = (complex *)malloc(SEQ_N/2 * sizeof(complex));
+	X = (complex *)malloc(SEQ_N * sizeof(complex));
 
 	//构造y(n)
 //	yn[0].real=0.0; yn[0].img=1.0;
@@ -169,10 +188,15 @@ void iFFTR(double *dat_seq, int SEQ_N, int SEQ_M, complex res_seq[])
 		}
 	}
 
-	for (i=0; i < SEQ_N; i++) {
+	/*for (i=0; i < SEQ_N; i++) {
 		res_seq[i].real = X[i].real;
 		res_seq[i].img = X[i].img;
-	}
+	}*/
+	memcpy(res_seq, X, SEQ_N*sizeof(complex));
+	free(yn);
+	free(X1);
+	free(X2);
+	free(X);
 }
 
 void FFT(complex *input_seq, int SEQ_N, int SEQ_M, complex res_seq[])
