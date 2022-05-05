@@ -1,319 +1,96 @@
-#include <stdio.h>
-#include <stdlib.h>
+/***************************************************************************
+  *
+  * Homework for chapter 3 -- "overlap-save method"
+  *
+  * Here is the realization of FFT function.
+  * The input/output data are stored in fftdata. FFT order should also be
+  * assigned. It equals to log2(fft_length)
+  *
+  **************************************************************************/
+
 #include <math.h>
-#include <string.h>
+#include <stddef.h>
+#include "typedefs.h"
 #include "baselib.h"
 
-//输入序列的长度必须是2的整数次幂
-void Reader_Sort(complex *x, int len)
+void fft(COMPLEX *fftdata, int fftorder)
 {
-	complex temp;
-	int cur_rev = 0; //从0开始，递推出所有原自然排序数对应的倒序数
-	int k = len / 2; //初始化权值系数
-	int j;
-	for (j = 1; j <= len - 1; j++) {
-		//当前倒序数的最高位为0，
-		if (cur_rev < k) {
-			//把temp的最高位从0变为1(加上权系数)即可得到下一个倒序数
-			cur_rev = cur_rev + k;
-		} else {
-			//当前倒序数的最高位为1
-			while (cur_rev >= k) {
-				//把最高位从1变为0(减去权系数即可)
-				cur_rev = cur_rev - k;
-				//没跳出循环就说明次高位为1，则更新权系数，将当前位设为0，......
-				k = k / 2;
-			}
-			//当前位(最高位)为0，跳出while()，置为1(加上权系数)，即得当前倒序数
-			cur_rev = cur_rev + k;
-			//还原权系数值
-			k = len / 2;
-		}
-		//printf("j=%d, cur_rev=%d\n", j, cur_rev);
-		//互换x[j]和x[cur_rev]
-		if (j < cur_rev) {
-			//实数部分互换
-			temp.real = x[j].real;
-			x[j].real = x[cur_rev].real;
-			x[cur_rev].real = temp.real;
 
-			//虚数部分互换
-			temp.img = x[j].img;
-			x[j].img = x[cur_rev].img;
-			x[cur_rev].img = temp.img;
+    int n, i, nv2, j, k, le, l, le1, ip, nm1;
+    COMPLEX t, u, w;
+
+    n = 1;
+    for (i = 0; i < (int)fftorder; i++) {
+        n = n * 2;
+    }
+
+    nv2 = n / 2;
+    nm1 = n - 1;
+    j = 1;
+
+    for (i = 1; i <= nm1; i ++) {
+        if (i < j) {
+            t.real = fftdata[i - 1].real;
+            t.image = fftdata[i - 1].image;
+            fftdata[i - 1].real = fftdata[j - 1].real;
+            fftdata[i - 1].image = fftdata[j - 1].image;
+            fftdata[j - 1].real = t.real;
+            fftdata[j - 1].image = t.image;
+        }
+
+        k = nv2;
+        while (k < j) {
+            j -= k;
+            k /= 2;
+        }
+        j += k;
+    }
+
+    le = 1;
+
+    for (l= 1; l <= (int)fftorder; l++) {
+	le *= 2;
+	le1 = le / 2;
+	u.real = 1.0f;
+	u.image = 0.0f;
+	w.real = (float) cos(PI / le1);
+	w.image =(float) -sin(PI / le1);
+
+	for (j = 1; j <= le1; j++) {
+		for (i = j; i <= n; i += le) {
+			ip = i + le1;
+			t.real = fftdata[ip - 1].real * u.real - fftdata[ip - 1].image * u.image;
+			t.image = fftdata[ip - 1].real * u.image + fftdata[ip - 1].image * u.real;
+			fftdata[ip - 1].real = fftdata[i - 1].real - t.real;
+			fftdata[ip - 1].image = fftdata[i - 1].image - t.image;
+			fftdata[i - 1].real = t.real + fftdata[i - 1].real;
+			fftdata[i - 1].image = t.image + fftdata[i - 1].image;
 		}
+
+		t.real = u.real * w.real - u.image * w.image;
+		t.image = u.image * w.real + u.real * w.image;
+		u.real = t.real;
+		u.image = t.image;
 	}
+    }
 }
 
-void FFTR(double *dat_seq, int SEQ_N, int SEQ_M, complex *res_seq)
+void ifft(COMPLEX *fftdata, int fftorder)
 {
-	int i, j, k, r;
-	int B, P;
-	complex Wn, Res;
-	//complex yn[SEQ_N/2], X1[SEQ_N/2], X2[SEQ_N/2], X[SEQ_N];
-	//complex yn[N/2], X1[N/2], X2[N/2], X[N];
-	complex *yn=NULL;
-	complex *X1=NULL;
-	complex *X2=NULL;
-	complex *X=NULL;
-	yn = (complex *)malloc(SEQ_N/2 * sizeof(complex));
-	X1 = (complex *)malloc(SEQ_N/2 * sizeof(complex));
-	X2 = (complex *)malloc(SEQ_N/2 * sizeof(complex));
-	X = (complex *)malloc(SEQ_N * sizeof(complex));
-
-	//构造y(n)
-//	yn[0].real=0.0; yn[0].img=1.0;
-//	yn[1].real=2.0; yn[1].img=3.0;
-//	yn[2].real=4.0; yn[2].img=5.0;
-//	yn[3].real=6.0; yn[3].img=7.0;
-	for (i=0; i<SEQ_N/2; i++) {
-		yn[i].real=dat_seq[2*i];
-		yn[i].img=dat_seq[2*i+1];
+	int n,i,j;
+	n=1;
+	for (i=0; i<(int)fftorder; i++) {
+		n=n*2;
 	}
 
-	//y(n)进行N/2点的FFT
-	//FFT(yn, SEQ_N/2, 2);
-	FFT(yn, SEQ_N/2, SEQ_M-1, NULL);
-
-	//求X1(k)和X2(k)
-	for (k=0; k < SEQ_N/2; k++) {
-		if (k==0) {
-			X1[k].real = yn[k].real;
-			X1[k].img = yn[k].img;
-			X2[k].real = yn[k].img;
-			X2[k].img = (-1)*yn[k].real;
-		} else {
-			X1[k].real=(yn[k].real + yn[SEQ_N/2-k].real)/2;
-			X1[k].img=(yn[k].img - yn[SEQ_N/2-k].img)/2;
-			X2[k].real=(yn[k].img + yn[SEQ_N/2-k].img)/2;
-			X2[k].img=(yn[SEQ_N/2-k].real - yn[k].real)/2;
-		}
+	for (i=0; i < n; ++i) {
+		fftdata[i].image = -fftdata[i].image;
 	}
 
-	//第M级(最后一级)的蝶形运算
-	B = 1;
-	B = (int)pow(2, SEQ_M-1);
-	for (j=0; j<=SEQ_N/2-1; j++) {
-		P=1;
-		P=j;
-		r=1;
-		r=j;
-		Wn.real = cos((2*PI)/SEQ_N*P);
-		Wn.img = -1*sin((2*PI)/SEQ_N*P);
-		complex_mul(X2[r], Wn, &Res);
-		X[r].real = X1[r].real + Res.real;
-		X[r].img = X1[r].img + Res.img;
-		if (r==0) {
-			X[SEQ_N/2].real = X1[0].real-X2[0].real;
-			X[SEQ_N/2].img = X1[0].img-X2[0].img;
-		} else {
-			X[SEQ_N-r].real = X[r].real;
-			X[SEQ_N-r].img = (-1)*X[r].img;
-		}
-	}
+	fft(fftdata, fftorder);
 
-	memcpy(res_seq, X, SEQ_N*sizeof(complex));
-	free(yn);
-	free(X1);
-	free(X2);
-	free(X);
-}
-
-void iFFTR(double *dat_seq, int SEQ_N, int SEQ_M, complex res_seq[])
-{
-	int i, j, k, r;
-	int B, P;
-	complex Wn, Res;
-	//complex yn[SEQ_N/2], X1[SEQ_N/2], X2[SEQ_N/2], X[SEQ_N];
-	//complex yn[N/2], X1[N/2], X2[N/2], X[N];
-	complex *yn=NULL;
-	complex *X1=NULL;
-	complex *X2=NULL;
-	complex *X=NULL;
-	yn = (complex *)malloc(SEQ_N/2 * sizeof(complex));
-	X1 = (complex *)malloc(SEQ_N/2 * sizeof(complex));
-	X2 = (complex *)malloc(SEQ_N/2 * sizeof(complex));
-	X = (complex *)malloc(SEQ_N * sizeof(complex));
-
-	//构造y(n)
-//	yn[0].real=0.0; yn[0].img=1.0;
-//	yn[1].real=2.0; yn[1].img=3.0;
-//	yn[2].real=4.0; yn[2].img=5.0;
-//	yn[3].real=6.0; yn[3].img=7.0;
-	for (i=0; i<SEQ_N/2; i++) {
-		yn[i].real=dat_seq[2*i];
-		yn[i].img=dat_seq[2*i+1];
-	}
-
-	//y(n)进行N/2点的FFT
-	//FFT(yn, SEQ_N/2, 2);
-	iFFT(yn, SEQ_N/2, SEQ_M-1, NULL);
-
-	//求X1(k)和X2(k)
-	for (k=0; k < SEQ_N/2; k++) {
-		if (k==0) {
-			X1[k].real = yn[k].real;
-			X1[k].img = yn[k].img;
-			X2[k].real = yn[k].img;
-			X2[k].img = (-1)*yn[k].real;
-		} else {
-			X1[k].real=(yn[k].real + yn[SEQ_N/2-k].real)/2;
-			X1[k].img=(yn[k].img - yn[SEQ_N/2-k].img)/2;
-			X2[k].real=(yn[k].img + yn[SEQ_N/2-k].img)/2;
-			X2[k].img=(yn[SEQ_N/2-k].real - yn[k].real)/2;
-		}
-	}
-
-	//第M级(最后一级)的蝶形运算
-	B = 1;
-	B = (int)pow(2, SEQ_M-1);
-	for (j=0; j<=SEQ_N/2-1; j++) {
-		P=j;
-		r=j;
-		Wn.real = cos((2.0*PI)/SEQ_N*P);
-		Wn.img = sin((2.0*PI)/SEQ_N*P);
-		complex_mul(X2[r], Wn, &Res);
-		X[r].real = X1[r].real + Res.real;
-		X[r].real = X[r].real/2;
-		X[r].img = X1[r].img + Res.img;
-		X[r].img = X[r].img/2;
-		if (r==0) {
-			X[SEQ_N/2].real = X1[0].real-X2[0].real;
-			X[SEQ_N/2].real = X[SEQ_N/2].real/2;
-			X[SEQ_N/2].img = X1[0].img-X2[0].img;
-			X[SEQ_N/2].img = X[SEQ_N/2].img/2;
-		} else {
-			X[SEQ_N-r].real = X[r].real;
-			X[SEQ_N-r].img = (-1)*X[r].img;
-		}
-	}
-
-	/*for (i=0; i < SEQ_N; i++) {
-		res_seq[i].real = X[i].real;
-		res_seq[i].img = X[i].img;
-	}*/
-	memcpy(res_seq, X, SEQ_N*sizeof(complex));
-	free(yn);
-	free(X1);
-	free(X2);
-	free(X);
-}
-
-void FFT(complex *input_seq, int SEQ_N, int SEQ_M, complex res_seq[])
-{
-	int i, j, r;
-	int L, B, K, P;
-	complex Temp, Wn, Res;
-	if (!input_seq) {
-		printf("input sequence can be NULL\n");
-		return ;
-	}
-
-	Reader_Sort(input_seq, SEQ_N);
-
-	for (L=1; L <= SEQ_M; L++) {
-		B=1;
-		B=(int)pow(2, L-1);
-		for (j=0; j<=B-1; j++) {
-			K=(int)pow(2, SEQ_M-L);
-			P=1;
-			P=K*j;
-			for (i=0; i<=K-1; i++) {
-				r=j;
-				r=j+2*B*i;
-				Temp = input_seq[r];
-				Wn.real = cos((2*PI)/SEQ_N*P);
-				Wn.img = -1*sin((2*PI)/SEQ_N*P);
-				complex_mul(input_seq[r+B], Wn, &Res);
-				input_seq[r].real=input_seq[r].real + Res.real;
-				input_seq[r].img=input_seq[r].img + Res.img;
-				input_seq[r+B].real=Temp.real - Res.real;
-				input_seq[r+B].img=Temp.img - Res.img;
-			}
-		}
-	}
-
-	if (!res_seq) {
-		printf("result sequence is NULL\n");
-		return ;
-	} else {
-		for(i=0; i<SEQ_N; i++){
-			res_seq[i].real = input_seq[i].real;
-			res_seq[i].img = input_seq[i].img;
-		}
+	for (j=0; j < n; ++j) {
+	        fftdata[i].real /= (float)n;
+	        fftdata[i].image /= (float)-n;
 	}
 }
-
-void iFFT(complex *input_seq, int SEQ_N, int SEQ_M, complex res_seq[])
-{
-	int i, j, r;
-	int L, B, K, P;
-	complex Temp, Wn, Res;
-	if (!input_seq) {
-		printf("input sequence can be NULL\n");
-		return ;
-	}
-
-	Reader_Sort(input_seq, SEQ_N);
-
-	for (L=1; L <= SEQ_M; L++) {
-		B=1;
-		B=(int)pow(2, L-1);
-		for (j=0; j<=B-1; j++) {
-			K=(int)pow(2, SEQ_M-L);
-			P=1;
-			P=K*j;
-			for (i=0; i<=K-1; i++) {
-				r=j;
-				r=j+2*B*i;
-				Temp = input_seq[r];
-				Wn.real = cos((2.0*PI)/SEQ_N*P);
-				Wn.img = sin((2.0*PI)/SEQ_N*P);
-				complex_mul(input_seq[r+B], Wn, &Res);
-				input_seq[r].real=input_seq[r].real + Res.real;
-				input_seq[r].real=(1.0/2) * input_seq[r].real;
-				input_seq[r].img=input_seq[r].img + Res.img;
-				input_seq[r].img=(1.0/2) * input_seq[r].img;
-				input_seq[r+B].real=Temp.real - Res.real;
-				input_seq[r+B].real=(1.0/2) * input_seq[r+B].real;
-				input_seq[r+B].img=Temp.img - Res.img;
-				input_seq[r+B].img=(1.0/2) * input_seq[r+B].img;
-			}
-		}
-	}
-
-	if (!res_seq) {
-		printf("result sequence is NULL\n");
-		return ;
-	} else {
-		for(i=0; i<SEQ_N; i++){
-			res_seq[i].real = input_seq[i].real;
-			res_seq[i].img = input_seq[i].img;
-		}
-	}
-}
-
-void complex_add(complex a, complex b, complex *c)
-{
-	c->real = a.real + b.real;
-	c->img = a.img + b.img;
-}
-
-void complex_sub(complex a, complex b, complex *c)
-{
-	c->real = a.real - b.real;
-	c->img = a.img - b.img;
-}
-
-void complex_mul(complex a, complex b, complex *c)
-{
-	c->real = a.real*b.real - a.img*b.img;
-	c->img = a.real*b.img + a.img*b.real;
-}
-
-void complex_div(complex   a, complex b, complex*c)
-{
-	c->real = (a.real*b.real + a.img*b.img)/(b.real*b.real + b.img*b.img);
-	c->img = (a.img*b.real - a.real*b.img)/(b.real*b.real + b.img*b.img);
-}
-
